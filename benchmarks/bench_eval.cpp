@@ -121,7 +121,7 @@ int main(int argc, char** argv) {
             std::uint64_t board = 0, h0 = 0, h1 = 0;
             int got = 0;
             while (m) {
-                int b = __builtin_ctzll(m);
+                int b = ctz64(m);
                 m &= m - 1;
                 std::uint64_t bit = 1ULL << b;
                 if      (got < 5) board |= bit;
@@ -162,7 +162,7 @@ int main(int argc, char** argv) {
             std::uint64_t board = 0, h0 = 0, h1 = 0;
             int got = 0;
             while (m) {
-                int b = __builtin_ctzll(m);
+                int b = ctz64(m);
                 m &= m - 1;
                 std::uint64_t bit = 1ULL << b;
                 if      (got < 5) board |= bit;

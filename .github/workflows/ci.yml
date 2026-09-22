@@ -57,7 +57,7 @@ jobs:
       # (verified locally on macOS — setuptools 68.2.2, the version the
       # stdlib `venv` module bundles, does not include bdist_wheel itself).
       - name: Install build + test dependencies
-        run: pip install pybind11 setuptools wheel pytest mypy
+        run: pip install pybind11 "setuptools>=77" wheel pytest mypy
 
       # The documented primary dev flow (see README "For iterative
       # development"). --no-build-isolation is the fast-loop variant: it
