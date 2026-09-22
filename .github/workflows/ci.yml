@@ -1,0 +1,175 @@
+# XiaPL CI — D4 Stage 1.
+#
+# Purpose: this is the project's first CI workflow, staged specifically to
+# get a first signal on Windows (MSVC / cl.exe), which has never been built
+# or tested before — the README's Platform support table lists Windows as
+# "source-portable; not yet verified on a Windows host". Everything in this
+# file is authored against local macOS verification only; IT HAS NEVER RUN
+# ON GITHUB ACTIONS. Treat the first few runs as shakeout: action version
+# pins, path separators, and the ctest multi-config invocation below are
+# the most likely early breakage points (see inline notes).
+#
+# Three jobs:
+#   - python:            editable install (pip install -e ., the documented
+#                         contributor flow) + pytest + mypy stubtest, on all
+#                         three OSes.
+#   - python-user-path:  plain `pip install .` under full build isolation,
+#                         Ubuntu only — proves the zero-knowledge end-user
+#                         install path (no pybind11/setuptools preinstalled).
+#   - cpp:                cmake/ctest for the C++ core, tests, examples, and
+#                         benchmarks, on all three OSes.
+
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: python (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    defaults:
+      run:
+        # bash exists on all three GitHub-hosted runners (Git Bash on
+        # Windows), so this keeps every step's shell syntax identical
+        # instead of branching on matrix.os.
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # `wheel` is required alongside pybind11/setuptools: without it,
+      # `pip install -e . --no-build-isolation` fails with
+      # "error: invalid command 'bdist_wheel'" on setuptools < 70.1
+      # (verified locally on macOS — setuptools 68.2.2, the version the
+      # stdlib `venv` module bundles, does not include bdist_wheel itself).
+      - name: Install build + test dependencies
+        run: pip install pybind11 setuptools wheel pytest mypy
+
+      # The documented primary dev flow (see README "For iterative
+      # development"). --no-build-isolation is the fast-loop variant: it
+      # skips pip re-installing the build toolchain into a throwaway
+      # environment on every invocation. Every `pip install -e .` still
+      # fully recompiles the C++ extension regardless of isolation mode —
+      # setuptools' editable-install hook builds in a fresh temp directory
+      # each time, so there is no incremental object-file cache across
+      # invocations (verified locally: touched-file and no-op rebuilds
+      # take the same wall time as the first build).
+      - name: Editable install
+        run: pip install -e . --no-build-isolation
+
+      - name: Import smoke
+        run: python -c "import xiapl; print(xiapl.__version__, xiapl.__file__)"
+
+      - name: pytest
+        run: python -m pytest python/test/ -q
+
+      # Verified locally to work from any cwd (both the repo root and a
+      # neutral directory resolve the installed/editable package the same
+      # way), so no cwd requirement here.
+      - name: mypy stubtest
+        run: python -m mypy.stubtest xiapl
+
+  python-user-path:
+    name: python-user-path (ubuntu, full isolation)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Deliberately nothing preinstalled beyond pip itself: this is the
+      # zero-knowledge end-user path (`pip install xiapl` once published).
+      # Full build isolation resolves pybind11/setuptools/wheel per
+      # pyproject.toml's [build-system] table into an ephemeral build env.
+      - name: pip install . (full build isolation)
+        run: pip install .
+
+      - name: Import smoke
+        run: python -c "import xiapl; print(xiapl.__version__, xiapl.__file__)"
+
+      - name: pytest against the installed distribution
+        run: |
+          pip install pytest
+          python -m pytest python/test/ -q
+
+  cpp:
+    name: cpp (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        # Per-os value for XIAPL_BUILD_SHARED, carried as a matrix variable
+        # rather than an inline conditional in the Configure step so each
+        # platform's setting is visible at a glance. An `include:` whose keys
+        # match an existing combination ADDS the variable to it; it does not
+        # create new jobs, so the matrix is still exactly three. The values are
+        # QUOTED: unquoted ON/OFF are YAML booleans, which would reach cmake as
+        # `true`/`false` -- still correct as far as CMake is concerned, but it
+        # makes the expansion depend on a parser coercion instead of saying
+        # what it means.
+        include:
+          # The waist v1 shared library, with its export surface pinned to
+          # xiapl_* by a linker export filter and asserted by the
+          # xiapl_c_api_shared_exports ctest -- ld64's -exported_symbols_list
+          # on macOS, GNU ld's --version-script on Linux.
+          - os: ubuntu-latest
+            shared: "ON"
+          - os: macos-latest
+            shared: "ON"
+          # OFF on Windows: no DLL export lane exists yet (waist v1 D4, still
+          # undecided). CMakeLists.txt configures an export filter and
+          # registers the export ctest on APPLE and Linux only, so a Windows
+          # SHARED=ON build would produce an unguarded DLL.
+          - os: windows-latest
+            shared: "OFF"
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: >
+          cmake -S . -B build
+          -DXIAPL_BUILD_TESTS=ON
+          -DXIAPL_BUILD_EXAMPLES=ON
+          -DXIAPL_BUILD_BENCHMARKS=ON
+          -DXIAPL_BUILD_SHARED=${{ matrix.shared }}
+
+      - name: Build
+        run: cmake --build build --config Release -j
+
+      # RISK (unverified — no Windows run has happened yet): on
+      # windows-latest, cmake's default generator is the multi-config
+      # Visual Studio generator, so build output lands under
+      # build/<target-dir>/Release/ rather than build/<target-dir>/. The
+      # `-C Release` flag here is required for ctest to resolve that path.
+      # add_test() in CMakeLists.txt registers tests by target name
+      # (`COMMAND xiapl_tests ...`) rather than an explicit
+      # $<TARGET_FILE:...> generator expression; CMake documents that a
+      # COMMAND matching a known target name is auto-rewritten to that
+      # target's (config-aware) output location, which should make this
+      # multi-config-safe, but that codepath has only been exercised
+      # locally on the single-config macOS/Makefiles generator. If ctest
+      # can't find xiapl_tests.exe on the first Windows run, start here.
+      - name: Test
+        run: ctest --test-dir build --output-on-failure -C Release

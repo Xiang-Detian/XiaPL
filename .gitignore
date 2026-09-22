@@ -1,0 +1,19 @@
+# Build directories
+build/
+build_*/
+dist/
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+.venv/
+venv/
+
+# Tooling caches
+.pytest_cache/
+.mypy_cache/
+.cache/
+compile_commands.json
+.DS_Store

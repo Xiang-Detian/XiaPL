@@ -1,0 +1,26 @@
+[1]
+variant = "NT"
+antes = [0.0, 0.0]
+blinds_or_straddles = [0.25, 0.5]
+min_bet = 0.5
+starting_stacks = [50.0, 62.75]
+time = 21:15:00
+time_zone_abbreviation = "JST"
+actions = [
+  "d dh p1 ????",
+  "d dh p2 ????",
+  "p1 cbr 1.5",
+  "p2 f",
+]
+
+[2]
+variant = "PO"
+antes = [0, 0]
+blinds_or_straddles = [1, 2]
+min_bet = 2
+starting_stacks = [200, 200]
+actions = [
+  "d dh p1 ????????",
+  "d dh p2 ????????",
+  "p1 f",
+]

@@ -1,0 +1,174 @@
+# XiaPL release: build wheels + sdist on a version tag and publish to PyPI.
+#
+# STAGED, NOT LIVE. Nothing in this file runs until someone pushes a tag
+# matching v* -- ordinary pushes and pull requests do not trigger it. Like
+# ci.yml, it was authored against local verification only and has never run
+# on GitHub Actions; unlike ci.yml, its first run is also its first publish,
+# so do a dry run first (see "Before the first real tag" below).
+#
+# Which Pythons get built, for which architectures, with which ISA
+# baseline, and the wheel smoke test all live in pyproject.toml under
+# [tool.cibuildwheel] rather than in env: blocks here, so that a local
+# `cibuildwheel` run and this workflow read one single source of truth.
+# Note that a local macOS run is not quite turnkey: cibuildwheel refuses to
+# install interpreters system-wide outside CI, so it needs the official
+# python.org framework builds of 3.11-3.13 present in
+# /Library/Frameworks/Python.framework/Versions/ first. Without them it
+# stops with "Framework CPython 3.x not detected". `--print-build-
+# identifiers` works regardless and is enough to check the selectors.
+#
+# Before the first real tag:
+#   1. Configure Trusted Publishing on PyPI (Manage project -> Publishing):
+#      owner Xiang-Detian, repo XiaPL, workflow release.yml, environment
+#      pypi. There is no API token anywhere in this file by design -- the
+#      publish job mints a short-lived OIDC credential instead, which is
+#      why it needs `id-token: write`.
+#   2. Create the `pypi` environment in the repo settings. Adding required
+#      reviewers there turns the publish step into a manual gate while
+#      still letting the build jobs run unattended -- worth doing for the
+#      first few releases, since the build jobs are the ones that have
+#      never run and publishing is irreversible.
+#   3. Dry-run before trusting it. The cheapest version: push a prerelease
+#      tag (v0.1.0rc1) and let build_wheels/build_sdist run, but do not
+#      configure the `pypi` environment yet -- the publish job then waits
+#      instead of uploading, and you get to inspect the artifacts. To
+#      rehearse the upload itself as well, add
+#      `with: {repository-url: "https://test.pypi.org/legacy/"}` to the
+#      publish step for one run (TestPyPI needs its own Trusted Publisher).
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build_wheels:
+    name: wheels (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest    # manylinux x86_64
+          - macos-latest     # arm64 + x86_64, see [tool.cibuildwheel.macos]
+          # D4 (the waist v1 DLL export lane) is closed: real-hardware
+          # verification came back all-green -- pip wheel + full pytest +
+          # stubtest on MSVC 19.51 / Python 3.12.9 (2026-09-10), ctest 4/4
+          # with zero warnings on MSVC (2026-09-22), and WSL2 / GCC13 at
+          # 6/6 with shared exports passing. See README.md's Platform
+          # support table. [tool.cibuildwheel.overrides] below now carries
+          # a win_amd64-specific entry (the x86_64 override cannot reach
+          # MSVC, whose flag syntax differs), so this is not a no-op
+          # enable. This is also this lane's first-ever run on GitHub
+          # Actions -- like ci.yml's Windows jobs, treat the first tag as
+          # shakeout.
+          - windows-latest
+    steps:
+      # Pinned to major versions: these actions keep a moving v4/v5 branch,
+      # so this picks up security fixes without silently jumping a major.
+      - uses: actions/checkout@v4
+
+      # cibuildwheel drives its own per-version interpreters; this Python
+      # only runs cibuildwheel itself.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Pinned exactly rather than to @v4, and deliberately so: cibuildwheel
+      # releases change default manylinux images and add or drop CPython
+      # targets, which would silently change what a rebuild of an old tag
+      # produces. This is the version the config in pyproject.toml was
+      # validated against locally.
+      - uses: pypa/cibuildwheel@v4.2.1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}
+          path: ./wheelhouse/*.whl
+          if-no-files-found: error
+
+  build_sdist:
+    name: sdist
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build sdist
+        run: pipx run build --sdist
+
+      # An sdist that cannot be compiled is worse than no sdist at all: it
+      # is what `pip install xiapl` falls back to on any platform without a
+      # published wheel. MANIFEST.in is what makes it complete (headers,
+      # binding/module_config.ini, preflop_rank_table.inc), and nothing
+      # else in this pipeline would notice if that regressed -- the wheel
+      # jobs build from the checkout, not from the sdist. So install the
+      # tarball itself, from an empty environment, and smoke it.
+      # This also carries the release's one version check: the installed
+      # __version__ must equal the tag being released, with the leading "v"
+      # stripped. It catches the classic mistake of tagging v0.2.0 while
+      # pyproject.toml still says 0.1.0 -- which PyPI would happily accept
+      # as another 0.1.0 upload and then refuse to let anyone correct,
+      # since uploads are immutable. Failing here costs nothing; failing
+      # after publish costs a version number.
+      - name: Verify the sdist builds, imports, and matches the tag
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          python -m venv /tmp/sdist-check
+          /tmp/sdist-check/bin/pip install --upgrade pip
+          /tmp/sdist-check/bin/pip install dist/*.tar.gz
+          cd /tmp   # leave the repo, so the import cannot resolve in-tree
+          EXPECTED="${TAG#v}" /tmp/sdist-check/bin/python -c "
+          import os, xiapl
+          from xiapl.canonicalize import generate_canonical_situations as gcs
+          expected = os.environ['EXPECTED']
+          assert xiapl.__version__ == expected, f'tag {expected!r} != __version__ {xiapl.__version__!r}'
+          n = len(gcs(3))
+          assert n == 1286792, n
+          print('sdist OK', xiapl.__version__, xiapl.__file__)
+          "
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+          if-no-files-found: error
+
+  publish:
+    name: publish to PyPI
+    needs: [build_wheels, build_sdist]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: pypi
+    permissions:
+      # The only permission the job has. `id-token: write` lets it mint the
+      # OIDC token that Trusted Publishing exchanges for a short-lived,
+      # project-scoped upload credential -- no PyPI token is stored in this
+      # repository's secrets, so there is nothing to leak or rotate.
+      id-token: write
+    steps:
+      # Collects every artifact from both upstream jobs into dist/ --
+      # merge-multiple flattens wheels-ubuntu-latest, wheels-macos-latest
+      # and sdist into one flat directory, which is the layout the publish
+      # action expects. Without it each artifact lands in its own subfolder
+      # and the upload finds nothing.
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: List what is about to be uploaded
+        run: ls -l dist
+
+      # No `password:` and no `user:` -- their absence is what selects
+      # Trusted Publishing. Uploads are immutable: a version can never be
+      # replaced, so a botched tag needs a new version number.
+      - uses: pypa/gh-action-pypi-publish@release/v1

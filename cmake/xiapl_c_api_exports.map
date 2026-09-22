@@ -1,0 +1,25 @@
+# GNU ld / lld version script for xiapl_c_api_shared -- the ELF counterpart of
+# cmake/xiapl_c_api_exports.txt (ld64's -exported_symbols_list). Both files
+# express the same rule, "export xiapl_* and nothing else", in the two linkers'
+# mutually incompatible file formats; CMakeLists.txt picks one per platform.
+#
+# Note the missing leading underscore: the Mach-O ABI prefixes every C symbol
+# with one (so `xiapl_foo` is `_xiapl_foo` and the ld64 list matches `_xiapl_*`),
+# while ELF does not. tests/check_exports.sh applies the same per-platform
+# prefix when it verifies the resulting export table.
+#
+# The version node is ANONYMOUS on purpose. A named node (`XIAPL_C_API_1.0
+# { ... };`) would stamp that label onto every exported symbol and emit a
+# .gnu.version_d section, which is a permanent ABI commitment: consumers link
+# against `xiapl_foo@@XIAPL_C_API_1.0` and renaming or dropping the node later
+# breaks them. The waist v1 C ABI is explicitly unstable before 1.0 and we ship
+# no soname versioning, so there is nothing to commit to yet. The anonymous form
+# filters the export surface without emitting any version definition at all --
+# which also keeps `nm --dynamic` output free of `@@VERSION` suffixes, so
+# check_exports.sh can compare plain symbol names on Linux and macOS alike.
+{
+  global:
+    xiapl_*;
+  local:
+    *;
+};

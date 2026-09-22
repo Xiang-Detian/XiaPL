@@ -1,0 +1,130 @@
+[
+  {
+    "variant": "NT",
+    "game": "Holdem",
+    "antes": [
+      0.0,
+      0.0
+    ],
+    "blinds_or_straddles": [
+      0.25,
+      0.5
+    ],
+    "min_bet": 0.5,
+    "starting_stacks": [
+      50.0,
+      62.75
+    ],
+    "players": [],
+    "finishing_stacks": [],
+    "winnings": [],
+    "collection_key": "1",
+    "extra": {
+      "time": "21:15:00",
+      "time_zone_abbreviation": "JST"
+    },
+    "actions": [
+      {
+        "verb": "dh",
+        "player": 1,
+        "amount": 0.0,
+        "cards": [],
+        "cards_text": "",
+        "unknown_count": 2,
+        "has_cards": true,
+        "same_as_dealt": false,
+        "commentary": ""
+      },
+      {
+        "verb": "dh",
+        "player": 2,
+        "amount": 0.0,
+        "cards": [],
+        "cards_text": "",
+        "unknown_count": 2,
+        "has_cards": true,
+        "same_as_dealt": false,
+        "commentary": ""
+      },
+      {
+        "verb": "cbr",
+        "player": 1,
+        "amount": 1.5,
+        "cards": [],
+        "cards_text": "",
+        "unknown_count": 0,
+        "has_cards": false,
+        "same_as_dealt": false,
+        "commentary": ""
+      },
+      {
+        "verb": "f",
+        "player": 2,
+        "amount": 0.0,
+        "cards": [],
+        "cards_text": "",
+        "unknown_count": 0,
+        "has_cards": false,
+        "same_as_dealt": false,
+        "commentary": ""
+      }
+    ]
+  },
+  {
+    "variant": "PO",
+    "game": "Plo",
+    "antes": [
+      0.0,
+      0.0
+    ],
+    "blinds_or_straddles": [
+      1.0,
+      2.0
+    ],
+    "min_bet": 2.0,
+    "starting_stacks": [
+      200.0,
+      200.0
+    ],
+    "players": [],
+    "finishing_stacks": [],
+    "winnings": [],
+    "collection_key": "2",
+    "extra": {},
+    "actions": [
+      {
+        "verb": "dh",
+        "player": 1,
+        "amount": 0.0,
+        "cards": [],
+        "cards_text": "",
+        "unknown_count": 4,
+        "has_cards": true,
+        "same_as_dealt": false,
+        "commentary": ""
+      },
+      {
+        "verb": "dh",
+        "player": 2,
+        "amount": 0.0,
+        "cards": [],
+        "cards_text": "",
+        "unknown_count": 4,
+        "has_cards": true,
+        "same_as_dealt": false,
+        "commentary": ""
+      },
+      {
+        "verb": "f",
+        "player": 1,
+        "amount": 0.0,
+        "cards": [],
+        "cards_text": "",
+        "unknown_count": 0,
+        "has_cards": false,
+        "same_as_dealt": false,
+        "commentary": ""
+      }
+    ]
+  }
+]

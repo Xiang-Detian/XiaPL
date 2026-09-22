@@ -1,0 +1,174 @@
+[build-system]
+# setuptools>=77: first release with PEP 639 SPDX license-expression support
+requires = ["setuptools>=77", "pybind11>=2.11"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "xiapl"
+version = "0.1.0"
+description = "Fast Texas Hold'em / PLO equity and hand-evaluation library (C++ core)"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{ name = "Xiang" }]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: C++",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Games/Entertainment",
+    "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://github.com/Xiang-Detian/XiaPL"
+Repository = "https://github.com/Xiang-Detian/XiaPL"
+
+[tool.setuptools]
+package-dir = {"" = "python"}
+packages = ["xiapl"]
+
+[tool.setuptools.package-data]
+xiapl = ["py.typed", "*.pyi"]
+
+# ---------------------------------------------------------------------------
+# Wheel building. Consumed by .github/workflows/release.yml on a v* tag, and
+# reproducible locally with `pipx run cibuildwheel --platform macos`. The
+# config lives here rather than in the workflow's env: block precisely so
+# that the local and CI builds cannot drift apart.
+# ---------------------------------------------------------------------------
+[tool.cibuildwheel]
+# Matches requires-python (>=3.11) and the Python classifiers above. Keep
+# the three in sync. Free-threaded builds (cp313t) are not selected by
+# these globs and would additionally need `enable`; the extension has not
+# been audited for the no-GIL memory model, and python/test/
+# test_gil_release.py assumes the GIL exists.
+build = ["cp311-*", "cp312-*", "cp313-*"]
+
+# musllinux (Alpine) is skipped: it doubles the Linux wheel count and its
+# own build time for a distro this library has never been built or tested
+# on. Alpine users still get the sdist, which compiles fine from source.
+skip = ["*-musllinux_*"]
+
+# Smoke test only -- deliberately not the full pytest suite. The suite takes
+# ~42s and would run once per wheel per architecture (9 wheels today), and
+# it is already run on every push by ci.yml (three OSes) and against a
+# from-scratch sdist install by release.yml's build_sdist job. What is *not*
+# covered elsewhere, and what this catches, is a wheel that was tagged,
+# cross-compiled or repaired wrong: it imports the compiled extension out of
+# the installed wheel and exercises a real computation.
+# generate_canonical_situations(3) is the right probe -- 1,286,792 is a
+# structural invariant of the canonicalization (a Burnside orbit count, see
+# python/test/test_canonicalize.py), it drives the suit-symmetry and mask
+# code paths rather than just touching module metadata, and it costs 0.6s.
+#
+# __version__ is asserted non-empty rather than pinned to a literal: pinning
+# would make every release bump require an edit here. The stronger check --
+# that the version actually matches the tag being released -- has no tag to
+# read from inside a cibuildwheel test env, so it lives in release.yml's
+# build_sdist job instead.
+test-command = '''python -c "import xiapl; from xiapl.canonicalize import generate_canonical_situations as gcs; assert isinstance(xiapl.__version__, str) and xiapl.__version__, repr(xiapl.__version__); n = len(gcs(3)); assert n == 1286792, n; print('wheel smoke OK:', xiapl.__version__, xiapl.__file__)"'''
+
+[tool.cibuildwheel.linux]
+# x86_64 only for now. aarch64 on a GitHub x86 runner means QEMU emulation,
+# which turns a ~2 minute compile into a very long one for every Python
+# version; it is worth revisiting when native arm64 Linux runners are used.
+# Linux arm64 users get the sdist meanwhile.
+archs = ["x86_64"]
+
+# Pinned rather than left to cibuildwheel's default so that rebuilding an
+# old tag keeps using the toolchain it was released with. manylinux_2_28
+# (glibc 2.28+, RHEL 8 / Ubuntu 18.10 and newer) also ships a GCC new
+# enough for the C++20 that setup.py requests, and for the -march below;
+# manylinux2014's older toolchain is not a safe fallback here.
+manylinux-x86_64-image = "manylinux_2_28"
+
+[tool.cibuildwheel.windows]
+# 64-bit only. cibuildwheel's "auto" on Windows selects AMD64 *and* x86
+# (win32), and a 32-bit wheel is neither tested nor wanted (the scientific
+# Python ecosystem dropped win32 years ago). Measured locally: the win32
+# lane also cross-links against the wrong-arch Python import library when
+# the environment carries x64 MSVC settings, so excluding it is both a
+# product decision and a build-robustness one.
+archs = ["AMD64"]
+
+[tool.cibuildwheel.macos]
+# Separate single-architecture wheels rather than one universal2 fat
+# binary: universal2 would roughly double the download for every user to
+# carry a slice they cannot execute, and pip resolves the per-arch tags
+# correctly on both kinds of Mac.
+#
+# macos-latest is arm64, so the x86_64 wheels here are cross-compiled
+# (cibuildwheel sets ARCHFLAGS). GitHub's Intel macOS runners are gone, so
+# cross-compiling is the only route left. cibuildwheel runs the
+# test-command for the cross-built wheel under Rosetta when it is available
+# and otherwise skips it with a warning -- an x86_64 wheel whose tests were
+# skipped is expected here, not a failure.
+archs = ["arm64", "x86_64"]
+
+# --- x86 ISA baseline ----------------------------------------------------
+# Keyed on the architecture suffix of the build identifier so that it hits
+# cp*-manylinux_x86_64 and cp*-macosx_x86_64 and nothing else. This is an
+# override rather than two per-platform `environment` entries on purpose:
+# `-march=x86-64-v2` is not a valid argument on arm64 and clang rejects it
+# outright (verified locally), so a platform-wide entry would break the
+# macOS arm64 wheels today and the Linux aarch64 wheels the moment someone
+# widens `archs` above.
+#
+# CPPFLAGS, *not* CXXFLAGS -- this is load-bearing. setuptools' unix
+# compiler does `cxxflags = os.environ.get('CXXFLAGS', cxxflags)`, i.e. the
+# environment variable REPLACES the interpreter's own flags, so setting
+# CXXFLAGS here would silently drop `-O3 -DNDEBUG` from the build and ship
+# an unoptimized wheel. CPPFLAGS goes through `_add_flags(cxxflags, 'CPP')`,
+# which appends. Verified locally on setuptools 84: with CPPFLAGS set, the
+# compile line still carries `-DNDEBUG -O3 -std=c++20` plus the added flag.
+#
+# Why x86-64-v2: the generic `x86-64` baseline predates POPCNT, so the
+# evaluator's per-suit flush popcounts get lowered to a SWAR sequence.
+# docs/benchmarks.md measures that lowering at ~23% of the evaluator
+# kernel's batch time (11.14 vs 14.38 ns/eval, paired diagnostic), and the
+# same table shows the kernel's batch time falling 33% (15.11 -> 10.15 ns)
+# between a flagless build and -march=native on a Xeon. -march=native is
+# not available to us -- a published wheel has to run on whatever machine
+# downloads it -- but x86-64-v2 recovers the POPCNT part and is a safe
+# floor: Nehalem/Core-i onwards, i.e. essentially any x86 CPU from 2009 on.
+[[tool.cibuildwheel.overrides]]
+select = "*_x86_64"
+environment = { CPPFLAGS = "-march=x86-64-v2" }
+
+# --- Windows ISA baseline -------------------------------------------------
+# The MSVC counterpart to the x86-64-v2 override above, needed because
+# MSVC's flag syntax and its POPCNT gating are both different from
+# clang/gcc's. Keyed on the win_amd64 build-identifier suffix (mirroring
+# how the override above keys off *_x86_64), so this can never reach an
+# arm64 wheel if one is ever added.
+#
+# Why: MSVC's STL only lowers std::popcount to the POPCNT instruction when
+# __AVX__ is defined; without an /arch switch it falls back to the same
+# kind of software popcount sequence that the x86-64-v2 override exists to
+# avoid on Linux/macOS (see docs/benchmarks.md's POPCNT measurements,
+# reproduced with the same ~20-23% cost on three different x86 machines).
+# There is no MSVC equivalent of `-march=x86-64-v2` -- its /arch switches
+# are coarser (SSE2, AVX, AVX2, ...) -- so /arch:AVX is the closest floor:
+# the oldest switch that turns the POPCNT path on. AVX-capable hardware has
+# shipped since 2011 (Sandy Bridge / Bulldozer onward), a comparable age
+# floor to x86-64-v2's 2009 (Nehalem).
+#
+# `environment = { CL = ... }`, not a flags file: CL is the environment
+# variable cl.exe itself reads and prepends to every invocation's command
+# line, which is the documented way cibuildwheel injects compiler flags
+# into an MSVC build (there is no CPPFLAGS/CXXFLAGS equivalent for MSVC).
+#
+# Not yet build-verified: the Windows wheel lane has never run before (it
+# was blocked on D4, see release.yml), so this override's first real
+# exercise is the first `v*` tag push that runs build_wheels on
+# windows-latest. If that build fails on a POPCNT-related symbol or an
+# unrecognized /arch value, this is the place to look first.
+[[tool.cibuildwheel.overrides]]
+select = "*-win_amd64"
+environment = { CL = "/arch:AVX" }

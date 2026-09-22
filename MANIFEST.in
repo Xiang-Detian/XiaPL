@@ -1,0 +1,82 @@
+# What goes into the source distribution (`python -m build --sdist`).
+#
+# Setuptools' sdist is additive, not a tree walk: by default it ships only
+# the files it already knows about -- pyproject.toml, setup.py, README.md,
+# the Python packages, and the .cpp files named as extension sources. It
+# ships no headers and no data files at all. Without the rules below the
+# sdist is unbuildable: setup.py reads binding/module_config.ini before it
+# can even declare the extension, and the .cpp sources include headers from
+# include/, src/, and binding/ plus the generated table
+# src/core/preflop_rank_table.inc.
+#
+# Two audiences to serve:
+#   1. pip, on a platform with no published wheel -- it downloads the sdist
+#      and compiles the extension from it. Section 1 below is what that
+#      needs; it is load-bearing, not optional.
+#   2. Anyone auditing or rebuilding the project from the sdist alone -- the
+#      standalone CMake build, both test suites with their fixtures,
+#      examples, benchmarks, and docs. Sections 2-4.
+#
+# Because the default file set is additive, build output (build/, dist/,
+# *.egg-info) and tool caches (.pytest_cache/, __pycache__/) are never
+# reached by any rule here; the trailing global-excludes are belt-and-braces
+# for the grafted directories.
+
+# --- 1. Build inputs: required for `pip install` from this sdist ---------
+# Read by setup.py at import time to resolve the extension name and sources.
+include binding/module_config.ini
+recursive-include binding *.cpp *.h
+recursive-include include *.h
+# *.inc picks up src/core/preflop_rank_table.inc, the precomputed preflop
+# rank table that eval.cpp #includes directly.
+recursive-include src *.cpp *.h *.inc
+
+# --- 2. Python package and its test suite -------------------------------
+recursive-include python/xiapl *.py *.pyi py.typed
+recursive-include python/test *.py
+
+# --- 3. Standalone C++ build (CMake), examples, benchmarks --------------
+include CMakeLists.txt
+graft cmake
+recursive-include apps *.cpp
+recursive-include examples *.cpp
+recursive-include benchmarks *.cpp
+
+# --- 4. C++ tests and docs ----------------------------------------------
+# tests/ mixes .cpp, a C ABI test in plain .c, bundled doctest.h, and two
+# shell guards (check_binding_includes.sh / check_exports.sh) that CMake
+# registers as ctests.
+recursive-include tests *.cpp *.c *.h *.sh
+# Grafted rather than extension-scoped: the fixtures are .phh, .phhs, their
+# .expected.json goldens, and a README, and new formats should not need an
+# edit here.
+graft tests/fixtures
+graft docs
+
+# LICENSE is not listed: setuptools' default `license-files` glob
+# (LICEN[CS]E*, COPYING*, NOTICE*, AUTHORS*) already sweeps it into both the
+# sdist and the wheel's .dist-info. Verified by adding a LICENSE file to a
+# scratch copy of this tree and confirming it appeared in both.
+
+# --- 5. On the absence of exclude rules ---------------------------------
+# There are none, deliberately, and this file should stay that way.
+#
+# Because the default file set is additive and every rule above is scoped
+# to a named directory, build output (build/, dist/, *.egg-info/) and tool
+# caches (.pytest_cache/, __pycache__/) are simply never reachable. A prune
+# for them would do nothing except emit "no previously-included directories
+# found matching ..." on every single build. Same for .github/ and
+# .gitignore, which are repository plumbing the sdist has no use for: not
+# named above, therefore not shipped.
+#
+# The one rule with a real (if small) target was `global-exclude .DS_Store`,
+# since the three grafts above take whatever is in those directories and
+# macOS litters .DS_Store into any folder opened in Finder. It was dropped
+# too: the published sdist is always built by .github/workflows/release.yml
+# from a fresh actions/checkout, which cannot contain a .DS_Store, and
+# Trusted Publishing means no one can upload a locally built artifact
+# instead. The guard would have cost four warning lines per build to
+# protect a case that cannot occur.
+#
+# Net effect: `python -m build` emits zero MANIFEST warnings, so any
+# warning that does appear here in future is real signal.

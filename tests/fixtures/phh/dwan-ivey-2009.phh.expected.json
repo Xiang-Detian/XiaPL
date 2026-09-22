@@ -1,0 +1,257 @@
+[
+  {
+    "variant": "NT",
+    "game": "Holdem",
+    "antes": [
+      500.0,
+      500.0,
+      500.0
+    ],
+    "blinds_or_straddles": [
+      1000.0,
+      2000.0,
+      0.0
+    ],
+    "min_bet": 2000.0,
+    "starting_stacks": [
+      1125600.0,
+      2000000.0,
+      553500.0
+    ],
+    "players": [
+      "Phil Ivey",
+      "Patrik Antonius",
+      "Tom Dwan"
+    ],
+    "finishing_stacks": [],
+    "winnings": [],
+    "collection_key": "",
+    "extra": {
+      "ante_trimming_status": true,
+      "author": "Juho Kim",
+      "event": "Full Tilt Million Dollar Cash Game S4E12",
+      "year": 2009,
+      "currency": "USD"
+    },
+    "actions": [
+      {
+        "verb": "dh",
+        "player": 1,
+        "amount": 0.0,
+        "cards": [
+          12,
+          13
+        ],
+        "cards_text": "Ac2d",
+        "unknown_count": 0,
+        "has_cards": true,
+        "same_as_dealt": false,
+        "commentary": ""
+      },
+      {
+        "verb": "dh",
+        "player": 2,
+        "amount": 0.0,
+        "cards": [],
+        "cards_text": "",
+        "unknown_count": 2,
+        "has_cards": true,
+        "same_as_dealt": false,
+        "commentary": ""
+      },
+      {
+        "verb": "dh",
+        "player": 3,
+        "amount": 0.0,
+        "cards": [
+          31,
+          30
+        ],
+        "cards_text": "7h6h",
+        "unknown_count": 0,
+        "has_cards": true,
+        "same_as_dealt": false,
+        "commentary": ""
+      },
+      {
+        "verb": "cbr",
+        "player": 3,
+        "amount": 7000.0,
+        "cards": [],
+        "cards_text": "",
+        "unknown_count": 0,
+        "has_cards": false,
+        "same_as_dealt": false,
+        "commentary": ""
+      },
+      {
+        "verb": "cbr",
+        "player": 1,
+        "amount": 23000.0,
+        "cards": [],
+        "cards_text": "",
+        "unknown_count": 0,
+        "has_cards": false,
+        "same_as_dealt": false,
+        "commentary": ""
+      },
+      {
+        "verb": "f",
+        "player": 2,
+        "amount": 0.0,
+        "cards": [],
+        "cards_text": "",
+        "unknown_count": 0,
+        "has_cards": false,
+        "same_as_dealt": false,
+        "commentary": ""
+      },
+      {
+        "verb": "cc",
+        "player": 3,
+        "amount": 0.0,
+        "cards": [],
+        "cards_text": "",
+        "unknown_count": 0,
+        "has_cards": false,
+        "same_as_dealt": false,
+        "commentary": ""
+      },
+      {
+        "verb": "db",
+        "player": 0,
+        "amount": 0.0,
+        "cards": [
+          9,
+          14,
+          3
+        ],
+        "cards_text": "Jc3d5c",
+        "unknown_count": 0,
+        "has_cards": true,
+        "same_as_dealt": false,
+        "commentary": ""
+      },
+      {
+        "verb": "cbr",
+        "player": 1,
+        "amount": 35000.0,
+        "cards": [],
+        "cards_text": "",
+        "unknown_count": 0,
+        "has_cards": false,
+        "same_as_dealt": false,
+        "commentary": ""
+      },
+      {
+        "verb": "cc",
+        "player": 3,
+        "amount": 0.0,
+        "cards": [],
+        "cards_text": "",
+        "unknown_count": 0,
+        "has_cards": false,
+        "same_as_dealt": false,
+        "commentary": ""
+      },
+      {
+        "verb": "db",
+        "player": 0,
+        "amount": 0.0,
+        "cards": [
+          28
+        ],
+        "cards_text": "4h",
+        "unknown_count": 0,
+        "has_cards": true,
+        "same_as_dealt": false,
+        "commentary": ""
+      },
+      {
+        "verb": "cbr",
+        "player": 1,
+        "amount": 90000.0,
+        "cards": [],
+        "cards_text": "",
+        "unknown_count": 0,
+        "has_cards": false,
+        "same_as_dealt": false,
+        "commentary": ""
+      },
+      {
+        "verb": "cbr",
+        "player": 3,
+        "amount": 232600.0,
+        "cards": [],
+        "cards_text": "",
+        "unknown_count": 0,
+        "has_cards": false,
+        "same_as_dealt": false,
+        "commentary": ""
+      },
+      {
+        "verb": "cbr",
+        "player": 1,
+        "amount": 1067100.0,
+        "cards": [],
+        "cards_text": "",
+        "unknown_count": 0,
+        "has_cards": false,
+        "same_as_dealt": false,
+        "commentary": ""
+      },
+      {
+        "verb": "cc",
+        "player": 3,
+        "amount": 0.0,
+        "cards": [],
+        "cards_text": "",
+        "unknown_count": 0,
+        "has_cards": false,
+        "same_as_dealt": false,
+        "commentary": ""
+      },
+      {
+        "verb": "sm",
+        "player": 1,
+        "amount": 0.0,
+        "cards": [
+          12,
+          13
+        ],
+        "cards_text": "Ac2d",
+        "unknown_count": 0,
+        "has_cards": true,
+        "same_as_dealt": false,
+        "commentary": ""
+      },
+      {
+        "verb": "sm",
+        "player": 3,
+        "amount": 0.0,
+        "cards": [
+          31,
+          30
+        ],
+        "cards_text": "7h6h",
+        "unknown_count": 0,
+        "has_cards": true,
+        "same_as_dealt": false,
+        "commentary": ""
+      },
+      {
+        "verb": "db",
+        "player": 0,
+        "amount": 0.0,
+        "cards": [
+          35
+        ],
+        "cards_text": "Jh",
+        "unknown_count": 0,
+        "has_cards": true,
+        "same_as_dealt": false,
+        "commentary": ""
+      }
+    ]
+  }
+]

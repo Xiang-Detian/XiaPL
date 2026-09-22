@@ -1,0 +1,70 @@
+[
+  {
+    "variant": "NT",
+    "game": "Holdem",
+    "antes": [
+      0.0,
+      0.0
+    ],
+    "blinds_or_straddles": [
+      1.0,
+      2.0
+    ],
+    "min_bet": 2.0,
+    "starting_stacks": [
+      200.0,
+      200.0
+    ],
+    "players": [],
+    "finishing_stacks": [],
+    "winnings": [],
+    "collection_key": "",
+    "extra": {},
+    "actions": [
+      {
+        "verb": "dh",
+        "player": 1,
+        "amount": 0.0,
+        "cards": [],
+        "cards_text": "",
+        "unknown_count": 2,
+        "has_cards": true,
+        "same_as_dealt": false,
+        "commentary": ""
+      },
+      {
+        "verb": "dh",
+        "player": 2,
+        "amount": 0.0,
+        "cards": [],
+        "cards_text": "",
+        "unknown_count": 2,
+        "has_cards": true,
+        "same_as_dealt": false,
+        "commentary": ""
+      },
+      {
+        "verb": "f",
+        "player": 1,
+        "amount": 0.0,
+        "cards": [],
+        "cards_text": "",
+        "unknown_count": 0,
+        "has_cards": false,
+        "same_as_dealt": false,
+        "commentary": ""
+      },
+      {
+        "verb": "sm",
+        "player": 2,
+        "amount": 0.0,
+        "cards": [],
+        "cards_text": "",
+        "unknown_count": 0,
+        "has_cards": false,
+        "same_as_dealt": false,
+        "commentary": "PHH commentary, part of the notation"
+      }
+    ]
+  }
+]

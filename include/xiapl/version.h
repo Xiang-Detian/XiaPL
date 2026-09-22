@@ -1,0 +1,6 @@
+#pragma once
+
+#define XIAPL_VERSION_MAJOR 0
+#define XIAPL_VERSION_MINOR 1
+#define XIAPL_VERSION_PATCH 0
+#define XIAPL_VERSION_STRING "0.1.0"
